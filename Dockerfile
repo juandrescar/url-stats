@@ -1,9 +1,6 @@
 # Imagen base de Node.js
 FROM node:18-alpine
 
-ARG UID
-ARG GID
-
 # Crear directorio de la app
 WORKDIR /app
 
@@ -20,4 +17,4 @@ COPY . .
 EXPOSE 3000
 
 # Comando para iniciar NestJS
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "start:dev"]
