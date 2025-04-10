@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 
 @Entity()
 export class Stats {
@@ -9,11 +9,11 @@ export class Stats {
   urlId: number;
 
   @Column()
-  clicks: number;
-
-  @Column()
   browser: string;
 
   @Column()
   location: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

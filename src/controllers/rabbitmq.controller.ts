@@ -25,12 +25,17 @@ export class RabbitMQConsumer {
   }
 
   @MessagePattern('urls_statistics')
-  async handleStatsMessage2(@Payload() data: any, @Ctx() context: RmqContext) {
-    this.logger.log('📦 Mensaje recibido en urls_statistics:', JSON.stringify(data, null, 2));
+  async handleStatsMessage(@Payload() data: any, @Ctx() context: RmqContext) {
+    try {
+      this.logger.log(`📦 Recibido en urls_statistics: ${JSON.stringify(data)}`);
 
-    console.log(`Context: ${context.getMessage()}`);
-    console.log(`chanel: ${context.getChannelRef()}`);
-    console.log(`ARGS: ${context.getArgs()}`);
-    console.log(`Pattern: ${context.getPattern()}`);
+      let { url_id, browser, location } = data;
+      browser = browser == false ? "Unknown" : browser;
+
+      await this.statsService.recordVisit(url_id, browser, location);
+      this.logger.log(`✅ Estadística guardada: URL ${url_id}`);
+    } catch (error) {
+      this.logger.error(`❌ Error procesando mensaje: ${error.message}`);
+    }
   }
 }

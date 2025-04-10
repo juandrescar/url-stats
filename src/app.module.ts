@@ -4,8 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { RabbitMQModule } from './rabbitmq.module';
 import { AppController } from './controllers/app.controller';
-import { StatsService } from './services/stats.service';
 import { Stats } from './entities/stats.entity';
+import { StatsModule } from './stats.module';
 
 @Module({
   imports: [
@@ -21,9 +21,10 @@ import { Stats } from './entities/stats.entity';
       synchronize: true,
     }),
     RabbitMQModule,
+    StatsModule,
     TypeOrmModule.forFeature([Stats]),
   ],
   controllers: [AppController],
-  providers: [AppService, StatsService],
+  providers: [AppService],
 })
 export class AppModule {}
