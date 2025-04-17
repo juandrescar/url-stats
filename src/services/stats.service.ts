@@ -47,68 +47,123 @@ export class StatsService {
   async getStatsByDate(period: 'daily' | 'weekly' | 'monthly', date?: string) {
     const today = date ? new Date(date) : new Date();
     const query = this.statsRepository.createQueryBuilder('stat');
-  
+
+    console.log(period);
     if (period === 'daily') {
       const year = today.getFullYear();
-      const month = today.getMonth() + 1;
-  
-      const rows = await query
+      const month = today.getMonth(); // 0-indexed
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+      const start = new Date(year, month, 1);
+      const end = new Date(today);
+      end.setHours(23, 59, 59, 999);
+      const endDateTime = end.toISOString().slice(0,10) +" "+ end.toISOString().slice(11,-1)
+
+    
+      const rawStats = await query
         .select("DATE(stat.createdAt)", "period")
         .addSelect("COUNT(*)", "visits")
-        .where("YEAR(stat.createdAt) = :year AND MONTH(stat.createdAt) = :month", { year, month })
+        .where("stat.createdAt BETWEEN :start AND :end", {
+          start: start.toISOString().split('T')[0],
+          end: endDateTime,
+        })
         .groupBy("DATE(stat.createdAt)")
-        .orderBy("DATE(stat.createdAt)", "ASC")
+        .orderBy("period", "ASC")
         .getRawMany();
 
-        return rows.map(row => ({
-          period: new Date(row.period).toISOString().split('T')[0],
-          visits: +row.visits,
-        }));
-  
-    } else if (period === 'weekly') {
+      const visitsMap = new Map(
+        rawStats.map(row => {
+          const date = String(row.month).padStart(2, '0');
+          return [row.period.toISOString().split('T')[0], +row.visits];
+        })
+      );
+    
+      const result = [];
+      for (let day = 1; day <= today.getDate(); day++) {
+        const date = new Date(year, month, day);
+        const formatted = date.toISOString().split('T')[0];
+        result.push({
+          period: formatted,
+          visits: visitsMap.get(formatted) || 0,
+        });
+      }
+    
+      return result;
+    }
+    
+    else if (period === 'weekly') {
       const startDate = new Date(today);
       startDate.setDate(today.getDate() - 6);
       startDate.setHours(0, 0, 0, 0);
+    
+      const endDate = new Date(today);
+      endDate.setHours(23, 59, 59, 999);
 
-      console.log({
-        start: startDate.toISOString().split('T')[0],
-        end: today.toISOString(),
-      })
+      const endDateTime = endDate.toISOString().slice(0,10) +" "+ endDate.toISOString().slice(11,-1)
 
-      return await query
+      const rawStats = await query
         .select("DATE(stat.createdAt)", "period")
         .addSelect("COUNT(*)", "visits")
         .where("stat.createdAt BETWEEN :start AND :end", {
           start: startDate.toISOString().split('T')[0],
-          end: today.toISOString(),
+          end: endDateTime,
         })
         .groupBy("DATE(stat.createdAt)")
         .orderBy("period", "ASC")
-        .getRawMany()
-        .then((rows) =>
-          rows.map((row) => ({
-            period: row.period.toISOString().split('T')[0],
-            visits: +row.visits,
-          }))
-        );
-  
-    } else if (period === 'monthly') {
+        .getRawMany();
+    
+      const visitsMap = new Map(
+        rawStats.map(row => {
+          const date = String(row.month).padStart(2, '0');
+          return [row.period.toISOString().split('T')[0], +row.visits];
+        })
+      );
+    
+      const result = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        const formatted = date.toISOString().split('T')[0];
+        result.push({
+          period: formatted,
+          visits: visitsMap.get(formatted) || 0,
+        });
+      }
+    
+      console.log(result);
+      return result;
+    }
+    
+    else if (period === 'monthly') {
       const year = today.getFullYear();
-  
-      return await query
-        .select("YEAR(stat.createdAt) AS year")
-        .addSelect("MONTH(stat.createdAt) AS month")
+    
+      const rawStats = await query
+        .select("YEAR(stat.createdAt)", "year")
+        .addSelect("MONTH(stat.createdAt)", "month")
         .addSelect("COUNT(*)", "visits")
         .where("YEAR(stat.createdAt) = :year", { year })
         .groupBy("YEAR(stat.createdAt), MONTH(stat.createdAt)")
-        .orderBy("year, month", "ASC")
-        .getRawMany()
-        .then((rows) =>
-          rows.map((row) => ({
-            period: `${row.year}-${String(row.month).padStart(2, '0')}`,
-            visits: +row.visits,
-          }))
-        );
+        .orderBy("month", "ASC")
+        .getRawMany();
+    
+      const visitsMap = new Map(
+        rawStats.map(row => {
+          const month = String(row.month).padStart(2, '0');
+          return [`${row.year}-${month}`, +row.visits];
+        })
+      );
+    
+      const result = [];
+      for (let m = 1; m <= today.getMonth() + 1; m++) {
+        const formattedMonth = String(m).padStart(2, '0');
+        const key = `${year}-${formattedMonth}`;
+        result.push({
+          period: key,
+          visits: visitsMap.get(key) || 0,
+        });
+      }
+    
+      return result;
     }
   
     return [];
@@ -121,18 +176,38 @@ export class StatsService {
   async getTopBrowsers() {
     return this.statsRepository
       .createQueryBuilder('stat')
-      .select('stat.browser, COUNT(stat.browser) as count')
+      .select('stat.browser, COUNT(stat.browser) as visits')
       .groupBy('stat.browser')
-      .orderBy('count', 'DESC')
+      .orderBy('visits', 'DESC')
+      .getRawMany();
+  }
+
+  async getStatsGroupedByBrowser() {
+    return this.statsRepository
+      .createQueryBuilder('stat')
+      .select('stat.browser', 'browser')
+      .addSelect('COUNT(*)', 'visits')
+      .groupBy('stat.browser')
+      .orderBy('visits', 'DESC')
       .getRawMany();
   }
 
   async getTopLocations() {
     return this.statsRepository
       .createQueryBuilder('stat')
-      .select('stat.location, COUNT(stat.location) as count')
+      .select('stat.location, COUNT(stat.location) as visits')
       .groupBy('stat.location')
-      .orderBy('count', 'DESC')
+      .orderBy('visits', 'DESC')
+      .getRawMany();
+  }
+
+  async getStatsGroupedByLocation() {
+    return this.statsRepository
+      .createQueryBuilder('stat')
+      .select('stat.location', 'location')
+      .addSelect('COUNT(*)', 'visits')
+      .groupBy('stat.location')
+      .orderBy('visits', 'DESC')
       .getRawMany();
   }
 
