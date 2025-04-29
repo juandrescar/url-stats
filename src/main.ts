@@ -5,7 +5,10 @@ import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.enableCors({
+    origin: process.env.APP_URL,
+    credentials: true,
+  });
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
@@ -16,14 +19,14 @@ async function bootstrap() {
   const microservice = app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: ['amqp://guest:guest@rabbitmq:5672'],
-      queue: 'urls_statistics',
+      urls: [process.env.RABBITMQ_URL],
+      queue: process.env.RABBITMQ_QUEUE_URLS,
       queueOptions: { durable: true },
     },
   });
 
   await microservice.listen();
   logger.log(`Application started on ${port} port`);
-  console.log('✅ Microservicio conectado a RabbitMQ');
+  logger.log('Microservicio conectado a RabbitMQ');
 }
 bootstrap();

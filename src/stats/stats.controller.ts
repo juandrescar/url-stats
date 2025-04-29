@@ -1,6 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { StatsService } from '../services/stats.service';
+import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
+import { StatsService } from './stats.service';
+import { AuthGuard } from '@nestjs/passport';
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('stats')
 export class StatsController {
   constructor(private readonly statsService: StatsService) {}

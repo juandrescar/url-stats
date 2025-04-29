@@ -1,7 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, Payload, RmqContext, Ctx, EventPattern } from '@nestjs/microservices';
 import { Reflector } from '@nestjs/core';
-import { StatsService } from '../services/stats.service';
+import { StatsService } from '../stats/stats.service';
 
 
 @Controller()

@@ -1,14 +1,16 @@
 # Imagen base de Node.js
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Crear directorio de la app
-WORKDIR /app
+WORKDIR /var/www/stats-api
+
+RUN apk add --no-cache libc6-compat
 
 # Copiar archivos del proyecto
 COPY package*.json ./
 
 # Instalar dependencias
-RUN npm install --only=production
+RUN npm install
 
 # Copiar el código fuente
 COPY . .
