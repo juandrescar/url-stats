@@ -2,7 +2,7 @@
 FROM node:20-alpine
 
 # Crear directorio de la app
-WORKDIR /var/www/stats-api
+WORKDIR /var/www/url-stats
 
 RUN apk add --no-cache libc6-compat
 
